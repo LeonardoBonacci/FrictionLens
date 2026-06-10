@@ -28,15 +28,15 @@
 
 ## Phase 4: Backend – Query & Analysis API
 
-- [ ] `POST /api/query` – natural-language query endpoint
-  - [ ] Send user question to Ollama for intent interpretation
-  - [ ] Generate query embedding
-  - [ ] Perform hybrid search: pgvector semantic similarity + structured filters
-  - [ ] Cluster matching reports
-  - [ ] Summarize clustered results via Ollama (grounded, no hallucination)
-  - [ ] Return explainable summary + supporting report snippets
-- [ ] `GET /api/trends` – time-based trend analysis (by role, team, category)
-- [ ] Tests for query and trend endpoints
+- [x] `POST /api/query` – natural-language query endpoint
+  - [x] Send user question to Ollama for intent interpretation
+  - [x] Generate query embedding
+  - [x] Perform hybrid search: pgvector semantic similarity + structured filters
+  - [x] Cluster matching reports
+  - [x] Summarize clustered results via Ollama (grounded, no hallucination)
+  - [x] Return explainable summary + supporting report snippets
+- [x] `GET /api/trends` – time-based trend analysis (by role, team, category)
+- [x] Tests for query and trend endpoints
 
 ## Phase 5: LLM Integration (Ollama)
 

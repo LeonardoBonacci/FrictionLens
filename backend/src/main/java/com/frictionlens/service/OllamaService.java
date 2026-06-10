@@ -1,11 +1,14 @@
 package com.frictionlens.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.frictionlens.config.OllamaConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -28,12 +31,40 @@ public class OllamaService {
             Text to sanitize:
             """;
 
+    private static final String QUERY_INTERPRETATION_PROMPT = """
+            You are a query interpreter for a workplace friction reporting system. \
+            Given a user's natural language question about workplace friction or blockers, \
+            extract any structured filters that are explicitly or implicitly mentioned.
+            
+            Return a JSON object with these optional fields (include only if clearly mentioned):
+            - "jobTitle": a specific job role/title (e.g., "Software Engineer", "Designer")
+            - "team": a specific team name (e.g., "Platform", "UX")
+            - "category": a specific category (e.g., "Tooling", "Process", "Communication")
+            - "severity": a severity level (one of: LOW, MEDIUM, HIGH, CRITICAL)
+            
+            Return ONLY valid JSON. If no filters can be extracted, return {}.
+            """;
+
+    private static final String SUMMARIZATION_PROMPT = """
+            You are an analyst summarizing workplace friction reports. Given a user's question \
+            and a set of relevant friction reports, provide a concise, actionable summary.
+            
+            Rules:
+            - Base your answer ONLY on the provided reports. Do not invent information.
+            - If the reports don't contain enough information to answer the question, say so.
+            - Highlight common themes and patterns across reports.
+            - Mention specific details from the reports to ground your summary.
+            - Keep the summary concise (2-4 paragraphs).
+            """;
+
     private final WebClient webClient;
     private final OllamaConfig ollamaConfig;
+    private final ObjectMapper objectMapper;
 
-    public OllamaService(OllamaConfig ollamaConfig, WebClient.Builder webClientBuilder) {
+    public OllamaService(OllamaConfig ollamaConfig, WebClient.Builder webClientBuilder, ObjectMapper objectMapper) {
         this.ollamaConfig = ollamaConfig;
         this.webClient = webClientBuilder.baseUrl(ollamaConfig.getBaseUrl()).build();
+        this.objectMapper = objectMapper;
     }
 
     public String sanitizeText(String text) {
@@ -97,6 +128,84 @@ public class OllamaService {
         } catch (Exception e) {
             log.error("Ollama embedding generation failed: {}", e.getMessage());
             return null;
+        }
+    }
+
+    public Map<String, String> interpretQuery(String question) {
+        try {
+            Map<String, Object> request = Map.of(
+                    "model", ollamaConfig.getModel(),
+                    "messages", List.of(
+                            Map.of("role", "system", "content", QUERY_INTERPRETATION_PROMPT),
+                            Map.of("role", "user", "content", question)
+                    ),
+                    "stream", false
+            );
+
+            Map<?, ?> response = webClient.post()
+                    .uri("/api/chat")
+                    .bodyValue(request)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+
+            if (response != null && response.get("message") instanceof Map<?, ?> message) {
+                String content = (String) message.get("content");
+                if (content != null && !content.isBlank()) {
+                    String json = content.strip();
+                    // Strip markdown code fences if present
+                    if (json.startsWith("```")) {
+                        json = json.replaceAll("^```\\w*\\n?", "").replaceAll("\\n?```$", "").strip();
+                    }
+                    return objectMapper.readValue(json, new TypeReference<>() {});
+                }
+            }
+
+            log.warn("Ollama query interpretation returned empty response");
+            return Collections.emptyMap();
+        } catch (Exception e) {
+            log.error("Ollama query interpretation failed: {}", e.getMessage());
+            return Collections.emptyMap();
+        }
+    }
+
+    public String summarizeReports(String question, List<String> reportTexts) {
+        try {
+            StringBuilder reportsBlock = new StringBuilder();
+            for (int i = 0; i < reportTexts.size(); i++) {
+                reportsBlock.append(String.format("Report %d: %s%n", i + 1, reportTexts.get(i)));
+            }
+
+            String userMessage = String.format("Question: %s%n%nRelevant reports:%n%s", question, reportsBlock);
+
+            Map<String, Object> request = Map.of(
+                    "model", ollamaConfig.getModel(),
+                    "messages", List.of(
+                            Map.of("role", "system", "content", SUMMARIZATION_PROMPT),
+                            Map.of("role", "user", "content", userMessage)
+                    ),
+                    "stream", false
+            );
+
+            Map<?, ?> response = webClient.post()
+                    .uri("/api/chat")
+                    .bodyValue(request)
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block();
+
+            if (response != null && response.get("message") instanceof Map<?, ?> message) {
+                String content = (String) message.get("content");
+                if (content != null && !content.isBlank()) {
+                    return content.strip();
+                }
+            }
+
+            log.warn("Ollama summarization returned empty response");
+            return "Unable to generate summary. Please review the supporting reports below.";
+        } catch (Exception e) {
+            log.error("Ollama summarization failed: {}", e.getMessage());
+            return "Unable to generate summary. Please review the supporting reports below.";
         }
     }
 }

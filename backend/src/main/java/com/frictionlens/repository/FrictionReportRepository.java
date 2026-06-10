@@ -52,4 +52,43 @@ public interface FrictionReportRepository extends JpaRepository<FrictionReport, 
             LIMIT :limit
             """, nativeQuery = true)
     List<FrictionReport> findNearestByEmbedding(String queryVector, int limit);
+
+    @Query(value = """
+            SELECT * FROM friction_reports
+            WHERE embedding IS NOT NULL
+              AND (:jobTitle IS NULL OR job_title = :jobTitle)
+              AND (:team IS NULL OR team = :team)
+              AND (:category IS NULL OR category = :category)
+              AND (cast(:severity as text) IS NULL OR severity = cast(:severity as text))
+            ORDER BY embedding <-> cast(:queryVector as vector)
+            LIMIT :limit
+            """, nativeQuery = true)
+    List<FrictionReport> findHybridSearch(
+            @Param("queryVector") String queryVector,
+            @Param("jobTitle") String jobTitle,
+            @Param("team") String team,
+            @Param("category") String category,
+            @Param("severity") String severity,
+            @Param("limit") int limit
+    );
+
+    @Query("SELECT r.team, COUNT(r) FROM FrictionReport r " +
+            "WHERE (:from IS NULL OR r.createdAt >= :from) AND (:to IS NULL OR r.createdAt <= :to) " +
+            "GROUP BY r.team ORDER BY COUNT(r) DESC")
+    List<Object[]> countByTeam(@Param("from") Instant from, @Param("to") Instant to);
+
+    @Query("SELECT r.category, COUNT(r) FROM FrictionReport r " +
+            "WHERE (:from IS NULL OR r.createdAt >= :from) AND (:to IS NULL OR r.createdAt <= :to) " +
+            "GROUP BY r.category ORDER BY COUNT(r) DESC")
+    List<Object[]> countByCategory(@Param("from") Instant from, @Param("to") Instant to);
+
+    @Query("SELECT CAST(r.severity AS string), COUNT(r) FROM FrictionReport r " +
+            "WHERE (:from IS NULL OR r.createdAt >= :from) AND (:to IS NULL OR r.createdAt <= :to) " +
+            "GROUP BY r.severity ORDER BY COUNT(r) DESC")
+    List<Object[]> countBySeverity(@Param("from") Instant from, @Param("to") Instant to);
+
+    @Query("SELECT r.jobTitle, COUNT(r) FROM FrictionReport r " +
+            "WHERE (:from IS NULL OR r.createdAt >= :from) AND (:to IS NULL OR r.createdAt <= :to) " +
+            "GROUP BY r.jobTitle ORDER BY COUNT(r) DESC")
+    List<Object[]> countByJobTitle(@Param("from") Instant from, @Param("to") Instant to);
 }
