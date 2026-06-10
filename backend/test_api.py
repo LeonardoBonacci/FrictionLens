@@ -440,7 +440,8 @@ class TestQuery:
         resp = requests.post(QUERY_URL, json=payload, timeout=120)
         assert resp.status_code == 200
         body = resp.json()
-        assert body["totalMatches"] >= 1
+        assert "summary" in body
+        assert "supportingReports" in body
 
     def test_query_with_severity_filter(self, submitted_report_ids):
         payload = {

@@ -26,20 +26,31 @@ public interface FrictionReportRepository extends JpaRepository<FrictionReport, 
 
     Page<FrictionReport> findByCreatedAtBetween(Instant from, Instant to, Pageable pageable);
 
-    @Query("""
-            SELECT r FROM FrictionReport r
-            WHERE (:jobTitle IS NULL OR r.jobTitle = :jobTitle)
-              AND (:team IS NULL OR r.team = :team)
-              AND (:category IS NULL OR r.category = :category)
-              AND (:severity IS NULL OR r.severity = :severity)
-              AND (:from IS NULL OR r.createdAt >= :from)
-              AND (:to IS NULL OR r.createdAt <= :to)
-            """)
+    @Query(value = """
+            SELECT * FROM friction_reports
+            WHERE (cast(:jobTitle as text) IS NULL OR job_title = :jobTitle)
+              AND (cast(:team as text) IS NULL OR team = :team)
+              AND (cast(:category as text) IS NULL OR category = :category)
+              AND (cast(:severity as text) IS NULL OR severity = cast(:severity as text))
+              AND (cast(:from as timestamptz) IS NULL OR created_at >= cast(:from as timestamptz))
+              AND (cast(:to as timestamptz) IS NULL OR created_at <= cast(:to as timestamptz))
+            ORDER BY created_at DESC
+            """,
+            countQuery = """
+            SELECT count(*) FROM friction_reports
+            WHERE (cast(:jobTitle as text) IS NULL OR job_title = :jobTitle)
+              AND (cast(:team as text) IS NULL OR team = :team)
+              AND (cast(:category as text) IS NULL OR category = :category)
+              AND (cast(:severity as text) IS NULL OR severity = cast(:severity as text))
+              AND (cast(:from as timestamptz) IS NULL OR created_at >= cast(:from as timestamptz))
+              AND (cast(:to as timestamptz) IS NULL OR created_at <= cast(:to as timestamptz))
+            """,
+            nativeQuery = true)
     Page<FrictionReport> findWithFilters(
             @Param("jobTitle") String jobTitle,
             @Param("team") String team,
             @Param("category") String category,
-            @Param("severity") Severity severity,
+            @Param("severity") String severity,
             @Param("from") Instant from,
             @Param("to") Instant to,
             Pageable pageable
@@ -72,23 +83,27 @@ public interface FrictionReportRepository extends JpaRepository<FrictionReport, 
             @Param("limit") int limit
     );
 
-    @Query("SELECT r.team, COUNT(r) FROM FrictionReport r " +
-            "WHERE (:from IS NULL OR r.createdAt >= :from) AND (:to IS NULL OR r.createdAt <= :to) " +
-            "GROUP BY r.team ORDER BY COUNT(r) DESC")
+    @Query(value = "SELECT team, COUNT(*) FROM friction_reports " +
+            "WHERE (cast(:from as timestamptz) IS NULL OR created_at >= cast(:from as timestamptz)) " +
+            "AND (cast(:to as timestamptz) IS NULL OR created_at <= cast(:to as timestamptz)) " +
+            "GROUP BY team ORDER BY COUNT(*) DESC", nativeQuery = true)
     List<Object[]> countByTeam(@Param("from") Instant from, @Param("to") Instant to);
 
-    @Query("SELECT r.category, COUNT(r) FROM FrictionReport r " +
-            "WHERE (:from IS NULL OR r.createdAt >= :from) AND (:to IS NULL OR r.createdAt <= :to) " +
-            "GROUP BY r.category ORDER BY COUNT(r) DESC")
+    @Query(value = "SELECT category, COUNT(*) FROM friction_reports " +
+            "WHERE (cast(:from as timestamptz) IS NULL OR created_at >= cast(:from as timestamptz)) " +
+            "AND (cast(:to as timestamptz) IS NULL OR created_at <= cast(:to as timestamptz)) " +
+            "GROUP BY category ORDER BY COUNT(*) DESC", nativeQuery = true)
     List<Object[]> countByCategory(@Param("from") Instant from, @Param("to") Instant to);
 
-    @Query("SELECT CAST(r.severity AS string), COUNT(r) FROM FrictionReport r " +
-            "WHERE (:from IS NULL OR r.createdAt >= :from) AND (:to IS NULL OR r.createdAt <= :to) " +
-            "GROUP BY r.severity ORDER BY COUNT(r) DESC")
+    @Query(value = "SELECT severity, COUNT(*) FROM friction_reports " +
+            "WHERE (cast(:from as timestamptz) IS NULL OR created_at >= cast(:from as timestamptz)) " +
+            "AND (cast(:to as timestamptz) IS NULL OR created_at <= cast(:to as timestamptz)) " +
+            "GROUP BY severity ORDER BY COUNT(*) DESC", nativeQuery = true)
     List<Object[]> countBySeverity(@Param("from") Instant from, @Param("to") Instant to);
 
-    @Query("SELECT r.jobTitle, COUNT(r) FROM FrictionReport r " +
-            "WHERE (:from IS NULL OR r.createdAt >= :from) AND (:to IS NULL OR r.createdAt <= :to) " +
-            "GROUP BY r.jobTitle ORDER BY COUNT(r) DESC")
+    @Query(value = "SELECT job_title, COUNT(*) FROM friction_reports " +
+            "WHERE (cast(:from as timestamptz) IS NULL OR created_at >= cast(:from as timestamptz)) " +
+            "AND (cast(:to as timestamptz) IS NULL OR created_at <= cast(:to as timestamptz)) " +
+            "GROUP BY job_title ORDER BY COUNT(*) DESC", nativeQuery = true)
     List<Object[]> countByJobTitle(@Param("from") Instant from, @Param("to") Instant to);
 }

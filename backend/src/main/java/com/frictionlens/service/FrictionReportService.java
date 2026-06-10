@@ -8,6 +8,7 @@ import com.frictionlens.repository.FrictionReportRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
@@ -54,7 +55,10 @@ public class FrictionReportService {
     public Page<ReportResponse> listReports(String jobTitle, String team, String category,
                                             Severity severity, Instant from, Instant to,
                                             Pageable pageable) {
-        return reportRepository.findWithFilters(jobTitle, team, category, severity, from, to, pageable)
+        // Strip sort from pageable for native query (sort is handled in the query itself)
+        Pageable unsorted = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+        String severityStr = severity != null ? severity.name() : null;
+        return reportRepository.findWithFilters(jobTitle, team, category, severityStr, from, to, unsorted)
                 .map(ReportResponse::from);
     }
 }

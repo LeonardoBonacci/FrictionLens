@@ -69,8 +69,9 @@ public class QueryService {
             // Fallback to filtered search without embedding
             log.warn("Embedding generation failed, falling back to filtered search");
             results = reportRepository.findWithFilters(
-                    jobTitle, team, category, severity, null, null,
-                    PageRequest.of(0, MAX_RESULTS, Sort.by(Sort.Direction.DESC, "createdAt"))
+                    jobTitle, team, category,
+                    severity != null ? severity.name() : null, null, null,
+                    PageRequest.of(0, MAX_RESULTS)
             ).getContent();
         }
 
