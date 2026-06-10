@@ -5,7 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.frictionlens.config.OllamaConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 
 import java.util.Collections;
@@ -63,12 +66,36 @@ public class OllamaService {
 
     public OllamaService(OllamaConfig ollamaConfig, RestClient.Builder restClientBuilder, ObjectMapper objectMapper) {
         this.ollamaConfig = ollamaConfig;
-        this.restClient = restClientBuilder.baseUrl(ollamaConfig.getBaseUrl()).build();
         this.objectMapper = objectMapper;
+
+        var requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(ollamaConfig.getConnectTimeoutMs());
+        requestFactory.setReadTimeout(ollamaConfig.getReadTimeoutMs());
+
+        this.restClient = restClientBuilder
+                .baseUrl(ollamaConfig.getBaseUrl())
+                .requestFactory(requestFactory)
+                .build();
+    }
+
+    /**
+     * Checks whether the Ollama instance is reachable and responsive.
+     */
+    public boolean isAvailable() {
+        try {
+            restClient.get()
+                    .uri("/api/tags")
+                    .retrieve()
+                    .body(Map.class);
+            return true;
+        } catch (Exception e) {
+            log.warn("Ollama health check failed: {}", e.getMessage());
+            return false;
+        }
     }
 
     public String sanitizeText(String text) {
-        try {
+        return executeWithRetry("sanitization", () -> {
             Map<String, Object> request = Map.of(
                     "model", ollamaConfig.getModel(),
                     "messages", List.of(
@@ -90,17 +117,12 @@ public class OllamaService {
                     return content.strip();
                 }
             }
-
-            log.warn("Ollama sanitization returned empty response, using original text");
-            return text;
-        } catch (Exception e) {
-            log.error("Ollama sanitization failed, using original text: {}", e.getMessage());
-            return text;
-        }
+            return null;
+        }, text, "Ollama sanitization returned empty response, using original text");
     }
 
     public float[] generateEmbedding(String text) {
-        try {
+        return executeWithRetry("embedding", () -> {
             Map<String, Object> request = Map.of(
                     "model", ollamaConfig.getModel(),
                     "input", text
@@ -120,17 +142,12 @@ public class OllamaService {
                 }
                 return result;
             }
-
-            log.warn("Ollama embedding returned empty response");
             return null;
-        } catch (Exception e) {
-            log.error("Ollama embedding generation failed: {}", e.getMessage());
-            return null;
-        }
+        }, null, "Ollama embedding returned empty response");
     }
 
     public Map<String, String> interpretQuery(String question) {
-        try {
+        return executeWithRetry("query interpretation", () -> {
             Map<String, Object> request = Map.of(
                     "model", ollamaConfig.getModel(),
                     "messages", List.of(
@@ -150,24 +167,19 @@ public class OllamaService {
                 String content = (String) message.get("content");
                 if (content != null && !content.isBlank()) {
                     String json = content.strip();
-                    // Strip markdown code fences if present
                     if (json.startsWith("```")) {
                         json = json.replaceAll("^```\\w*\\n?", "").replaceAll("\\n?```$", "").strip();
                     }
-                    return objectMapper.readValue(json, new TypeReference<>() {});
+                    return objectMapper.readValue(json, new TypeReference<Map<String, String>>() {});
                 }
             }
-
-            log.warn("Ollama query interpretation returned empty response");
-            return Collections.emptyMap();
-        } catch (Exception e) {
-            log.error("Ollama query interpretation failed: {}", e.getMessage());
-            return Collections.emptyMap();
-        }
+            return null;
+        }, Collections.emptyMap(), "Ollama query interpretation returned empty response");
     }
 
     public String summarizeReports(String question, List<String> reportTexts) {
-        try {
+        String fallback = "Unable to generate summary. Please review the supporting reports below.";
+        return executeWithRetry("summarization", () -> {
             StringBuilder reportsBlock = new StringBuilder();
             for (int i = 0; i < reportTexts.size(); i++) {
                 reportsBlock.append(String.format("Report %d: %s%n", i + 1, reportTexts.get(i)));
@@ -196,12 +208,70 @@ public class OllamaService {
                     return content.strip();
                 }
             }
+            return null;
+        }, fallback, "Ollama summarization returned empty response");
+    }
 
-            log.warn("Ollama summarization returned empty response");
-            return "Unable to generate summary. Please review the supporting reports below.";
-        } catch (Exception e) {
-            log.error("Ollama summarization failed: {}", e.getMessage());
-            return "Unable to generate summary. Please review the supporting reports below.";
+    /**
+     * Executes an Ollama operation with retry logic for transient failures.
+     * Retries on connection/timeout errors and 503 Service Unavailable responses.
+     */
+    private <T> T executeWithRetry(String operationName, OllamaOperation<T> operation,
+                                   T fallback, String emptyResponseMessage) {
+        int maxRetries = ollamaConfig.getMaxRetries();
+        long retryDelay = ollamaConfig.getRetryDelayMs();
+
+        for (int attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+                T result = operation.execute();
+                if (result != null) {
+                    return result;
+                }
+                log.warn(emptyResponseMessage);
+                return fallback;
+            } catch (ResourceAccessException e) {
+                if (attempt < maxRetries) {
+                    log.warn("Ollama {} attempt {}/{} failed (connection error), retrying in {}ms: {}",
+                            operationName, attempt + 1, maxRetries + 1, retryDelay, e.getMessage());
+                    retryDelay = sleepAndBackoff(operationName, retryDelay, fallback);
+                    if (retryDelay < 0) return fallback;
+                } else {
+                    log.error("Ollama {} failed after {} attempts (service unavailable): {}",
+                            operationName, maxRetries + 1, e.getMessage());
+                    return fallback;
+                }
+            } catch (HttpServerErrorException e) {
+                if (e.getStatusCode().value() == 503 && attempt < maxRetries) {
+                    log.warn("Ollama {} attempt {}/{} failed (503 Service Unavailable), retrying in {}ms",
+                            operationName, attempt + 1, maxRetries + 1, retryDelay);
+                    retryDelay = sleepAndBackoff(operationName, retryDelay, fallback);
+                    if (retryDelay < 0) return fallback;
+                } else {
+                    log.error("Ollama {} failed (HTTP {}): {}",
+                            operationName, e.getStatusCode().value(), e.getMessage());
+                    return fallback;
+                }
+            } catch (Exception e) {
+                log.error("Ollama {} failed: {}", operationName, e.getMessage());
+                return fallback;
+            }
         }
+        return fallback;
+    }
+
+    private <T> long sleepAndBackoff(String operationName, long retryDelay, T fallback) {
+        try {
+            Thread.sleep(retryDelay);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            log.error("Retry interrupted for Ollama {}", operationName);
+            return -1;
+        }
+        return retryDelay * 2;
+    }
+
+    @FunctionalInterface
+    private interface OllamaOperation<T> {
+        T execute() throws Exception;
     }
 }

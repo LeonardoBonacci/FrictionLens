@@ -40,12 +40,12 @@
 
 ## Phase 5: LLM Integration (Ollama)
 
-- [ ] Create Ollama client service (REST calls to local Ollama instance)
-- [ ] Implement text sanitization prompt (remove names, normalize references)
-- [ ] Implement embedding generation
-- [ ] Implement natural-language query interpretation prompt
-- [ ] Implement summarization prompt (grounded in retrieved data)
-- [ ] Add fallback/error handling for Ollama unavailability
+- [x] Create Ollama client service (REST calls to local Ollama instance)
+- [x] Implement text sanitization prompt (remove names, normalize references)
+- [x] Implement embedding generation
+- [x] Implement natural-language query interpretation prompt
+- [x] Implement summarization prompt (grounded in retrieved data)
+- [x] Add fallback/error handling for Ollama unavailability
 
 ## Phase 6: Frontend – Core UI
 

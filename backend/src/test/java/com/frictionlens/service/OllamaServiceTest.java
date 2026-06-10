@@ -18,15 +18,20 @@ class OllamaServiceTest {
 
     private MockWebServer mockServer;
     private OllamaService ollamaService;
+    private OllamaConfig config;
 
     @BeforeEach
     void setUp() throws Exception {
         mockServer = new MockWebServer();
         mockServer.start();
 
-        OllamaConfig config = new OllamaConfig();
+        config = new OllamaConfig();
         config.setBaseUrl(mockServer.url("/").toString());
         config.setModel("llama3.1:latest");
+        config.setConnectTimeoutMs(1000);
+        config.setReadTimeoutMs(500);
+        config.setMaxRetries(1);
+        config.setRetryDelayMs(100);
 
         ollamaService = new OllamaService(config, RestClient.builder(), new ObjectMapper());
     }
@@ -35,6 +40,26 @@ class OllamaServiceTest {
     void tearDown() throws Exception {
         mockServer.shutdown();
     }
+
+    // --- isAvailable ---
+
+    @Test
+    void isAvailable_returnsTrueWhenOllamaResponds() {
+        mockServer.enqueue(new MockResponse()
+                .setBody("{\"models\": []}")
+                .addHeader("Content-Type", "application/json"));
+
+        assertThat(ollamaService.isAvailable()).isTrue();
+    }
+
+    @Test
+    void isAvailable_returnsFalseOnError() {
+        mockServer.enqueue(new MockResponse().setResponseCode(500));
+
+        assertThat(ollamaService.isAvailable()).isFalse();
+    }
+
+    // --- sanitizeText ---
 
     @Test
     void sanitizeText_returnsCleanedText() {
@@ -65,6 +90,24 @@ class OllamaServiceTest {
     }
 
     @Test
+    void sanitizeText_retriesOnServiceUnavailable() {
+        // First attempt gets 503, second succeeds
+        mockServer.enqueue(new MockResponse().setResponseCode(503));
+        mockServer.enqueue(new MockResponse()
+                .setBody("""
+                        {"message": {"role": "assistant", "content": "sanitized text"}}
+                        """)
+                .addHeader("Content-Type", "application/json"));
+
+        String result = ollamaService.sanitizeText("raw text");
+
+        assertThat(result).isEqualTo("sanitized text");
+        assertThat(mockServer.getRequestCount()).isEqualTo(2);
+    }
+
+    // --- generateEmbedding ---
+
+    @Test
     void generateEmbedding_returnsFloatArray() {
         String responseBody = """
                 {
@@ -90,6 +133,19 @@ class OllamaServiceTest {
 
         assertThat(result).isNull();
     }
+
+    @Test
+    void generateEmbedding_returnsNullOnEmptyEmbeddings() {
+        mockServer.enqueue(new MockResponse()
+                .setBody("{\"embeddings\": []}")
+                .addHeader("Content-Type", "application/json"));
+
+        float[] result = ollamaService.generateEmbedding("test text");
+
+        assertThat(result).isNull();
+    }
+
+    // --- interpretQuery ---
 
     @Test
     void interpretQuery_extractsFilters() {
@@ -158,6 +214,8 @@ class OllamaServiceTest {
         assertThat(result).containsEntry("team", "UX");
     }
 
+    // --- summarizeReports ---
+
     @Test
     void summarizeReports_returnsSummary() {
         String responseBody = """
@@ -186,5 +244,33 @@ class OllamaServiceTest {
         String result = ollamaService.summarizeReports("question", List.of("report text"));
 
         assertThat(result).contains("Unable to generate summary");
+    }
+
+    // --- retry logic ---
+
+    @Test
+    void summarizeReports_retriesOnServiceUnavailable() {
+        mockServer.enqueue(new MockResponse().setResponseCode(503));
+        mockServer.enqueue(new MockResponse()
+                .setBody("""
+                        {"message": {"role": "assistant", "content": "Retry succeeded summary."}}
+                        """)
+                .addHeader("Content-Type", "application/json"));
+
+        String result = ollamaService.summarizeReports("question", List.of("report"));
+
+        assertThat(result).isEqualTo("Retry succeeded summary.");
+        assertThat(mockServer.getRequestCount()).isEqualTo(2);
+    }
+
+    @Test
+    void sanitizeText_returnsFallbackAfterAllRetriesExhausted() {
+        // maxRetries = 1, so 2 total attempts, both return 503
+        mockServer.enqueue(new MockResponse().setResponseCode(503));
+        mockServer.enqueue(new MockResponse().setResponseCode(503));
+
+        String result = ollamaService.sanitizeText("original text");
+
+        assertThat(result).isEqualTo("original text");
     }
 }
