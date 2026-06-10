@@ -2,20 +2,19 @@
 
 ## Phase 1: Project Setup
 
-- [ ] Initialize Spring Boot project (Java 25, Maven)
-- [ ] Initialize React frontend (Vite + TypeScript)
-- [ ] Set up PostgreSQL with pgvector extension (Docker Compose)
-- [ ] Set up Ollama locally with a supported model (Llama 3)
-- [ ] Define project structure and module boundaries
+- [x] Initialize Spring Boot project (Java 25, Maven)
+- [x] Initialize React frontend (Vite + TypeScript)
+- [x] Set up PostgreSQL with pgvector extension (Docker Compose)
+- [x] Set up Ollama locally with a supported model (Llama 3)
+- [x] Define project structure and module boundaries
 
 ## Phase 2: Data Layer
 
-- [ ] Design database schema
-  - [ ] `friction_reports` table: id, job_title, team, category, severity, blocker_text, embedding (vector), created_at
-  - [ ] Indexes on job_title, team, category, severity, created_at
-  - [ ] pgvector index on embedding column
-- [ ] Create Flyway/Liquibase migrations
-- [ ] Create JPA entities and repositories
+- [x] Design database schema
+  - [x] `friction_reports` table: id, job_title, team, category, severity, blocker_text, embedding (vector), created_at
+  - [x] Indexes on job_title, team, category, severity, created_at
+  - [x] pgvector index on embedding column
+- [x] Create JPA entities and repositories (Hibernate auto DDL)
 
 ## Phase 3: Backend – Ingestion API
 
@@ -50,7 +49,7 @@
 
 ## Phase 6: Frontend – Core UI
 
-- [ ] Set up TanStack Query for server state management
+- [x] Set up TanStack Query for server state management
 - [ ] Report submission form
   - [ ] Fields: job title (dropdown/text), team, category, severity, blocker description
   - [ ] Client-side validation
@@ -73,13 +72,13 @@
 - [ ] Ensure no PII in stored reports or logs
 - [ ] Input validation and XSS prevention on frontend
 - [ ] Rate limiting on report submission
-- [ ] CORS configuration
+- [x] CORS configuration
 
 ## Phase 9: DevOps & Deployment
 
-- [ ] Docker Compose for full stack (Spring Boot, PostgreSQL + pgvector, Ollama, React)
-- [ ] Environment configuration (profiles, secrets)
-- [ ] Health check endpoints
+- [x] Docker Compose for full stack (Spring Boot, PostgreSQL + pgvector, Ollama, React)
+- [x] Environment configuration (profiles, secrets)
+- [x] Health check endpoints
 - [ ] README updates with setup and run instructions
 
 ## Phase 10: Polish & Testing
