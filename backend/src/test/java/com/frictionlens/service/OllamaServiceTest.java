@@ -7,7 +7,7 @@ import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.client.RestClient;
 
 import java.util.List;
 import java.util.Map;
@@ -28,7 +28,7 @@ class OllamaServiceTest {
         config.setBaseUrl(mockServer.url("/").toString());
         config.setModel("llama3.1:latest");
 
-        ollamaService = new OllamaService(config, WebClient.builder(), new ObjectMapper());
+        ollamaService = new OllamaService(config, RestClient.builder(), new ObjectMapper());
     }
 
     @AfterEach

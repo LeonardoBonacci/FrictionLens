@@ -6,7 +6,7 @@ import com.frictionlens.config.OllamaConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.client.RestClient;
 
 import java.util.Collections;
 import java.util.List;
@@ -57,13 +57,13 @@ public class OllamaService {
             - Keep the summary concise (2-4 paragraphs).
             """;
 
-    private final WebClient webClient;
+    private final RestClient restClient;
     private final OllamaConfig ollamaConfig;
     private final ObjectMapper objectMapper;
 
-    public OllamaService(OllamaConfig ollamaConfig, WebClient.Builder webClientBuilder, ObjectMapper objectMapper) {
+    public OllamaService(OllamaConfig ollamaConfig, RestClient.Builder restClientBuilder, ObjectMapper objectMapper) {
         this.ollamaConfig = ollamaConfig;
-        this.webClient = webClientBuilder.baseUrl(ollamaConfig.getBaseUrl()).build();
+        this.restClient = restClientBuilder.baseUrl(ollamaConfig.getBaseUrl()).build();
         this.objectMapper = objectMapper;
     }
 
@@ -78,12 +78,11 @@ public class OllamaService {
                     "stream", false
             );
 
-            Map<?, ?> response = webClient.post()
+            Map<?, ?> response = restClient.post()
                     .uri("/api/chat")
-                    .bodyValue(request)
+                    .body(request)
                     .retrieve()
-                    .bodyToMono(Map.class)
-                    .block();
+                    .body(Map.class);
 
             if (response != null && response.get("message") instanceof Map<?, ?> message) {
                 String content = (String) message.get("content");
@@ -107,12 +106,11 @@ public class OllamaService {
                     "input", text
             );
 
-            Map<?, ?> response = webClient.post()
+            Map<?, ?> response = restClient.post()
                     .uri("/api/embed")
-                    .bodyValue(request)
+                    .body(request)
                     .retrieve()
-                    .bodyToMono(Map.class)
-                    .block();
+                    .body(Map.class);
 
             if (response != null && response.get("embeddings") instanceof List<?> embeddings
                     && !embeddings.isEmpty() && embeddings.getFirst() instanceof List<?> vector) {
@@ -142,12 +140,11 @@ public class OllamaService {
                     "stream", false
             );
 
-            Map<?, ?> response = webClient.post()
+            Map<?, ?> response = restClient.post()
                     .uri("/api/chat")
-                    .bodyValue(request)
+                    .body(request)
                     .retrieve()
-                    .bodyToMono(Map.class)
-                    .block();
+                    .body(Map.class);
 
             if (response != null && response.get("message") instanceof Map<?, ?> message) {
                 String content = (String) message.get("content");
@@ -187,12 +184,11 @@ public class OllamaService {
                     "stream", false
             );
 
-            Map<?, ?> response = webClient.post()
+            Map<?, ?> response = restClient.post()
                     .uri("/api/chat")
-                    .bodyValue(request)
+                    .body(request)
                     .retrieve()
-                    .bodyToMono(Map.class)
-                    .block();
+                    .body(Map.class);
 
             if (response != null && response.get("message") instanceof Map<?, ?> message) {
                 String content = (String) message.get("content");

@@ -52,12 +52,6 @@
             <version>${hibernate.version}</version>
         </dependency>
 
-        <!-- WebClient for Ollama calls -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-webflux</artifactId>
-        </dependency>
-
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
