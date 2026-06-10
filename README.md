@@ -6,9 +6,7 @@ A lightweight, privacy-preserving system that helps organizations understand whe
 
 ## Demo
 
-<video src="docs/demo.mp4" width="100%" controls autoplay muted loop>
-  Your browser does not support the video tag. <a href="docs/demo.mp4">Download the demo video</a>.
-</video>
+https://github.com/LeonardoBonacci/FrictionLens/raw/main/docs/demo.mp4
 
 > Submit friction reports, browse and filter them, then ask AI to summarize the biggest pain points — all in one flow. Recorded automatically via Playwright.
 
