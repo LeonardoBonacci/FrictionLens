@@ -50,14 +50,14 @@
 ## Phase 6: Frontend – Core UI
 
 - [x] Set up TanStack Query for server state management
-- [ ] Report submission form
-  - [ ] Fields: job title (dropdown/text), team, category, severity, blocker description
-  - [ ] Client-side validation
-  - [ ] Submit to `POST /api/reports`
-- [ ] Reports list view (paginated, filterable)
-- [ ] Natural-language query input
-  - [ ] Text input for freeform questions
-  - [ ] Display summarized results + supporting snippets
+- [x] Report submission form
+  - [x] Fields: job title, team, category, severity, blocker description
+  - [x] Client-side validation with field-level error display
+  - [x] Submit to `POST /api/reports` with success/failure feedback
+- [x] Reports list view (paginated, filterable by team/category/severity/jobTitle)
+- [x] Natural-language query input
+  - [x] Text input for freeform questions
+  - [x] Display AI-generated summary + supporting report snippets with match count
 
 ## Phase 7: Frontend – Dashboard
 
@@ -68,9 +68,9 @@
 
 ## Phase 8: Privacy & Security
 
-- [ ] Validate sanitization pipeline strips all personal identifiers
-- [ ] Ensure no PII in stored reports or logs
-- [ ] Input validation and XSS prevention on frontend
+- [x] Validate sanitization pipeline strips all personal identifiers (dual-layer: regex + LLM)
+- [x] Ensure no PII in stored reports or logs
+- [x] Input validation and XSS prevention on frontend
 - [ ] Rate limiting on report submission
 - [x] CORS configuration
 
@@ -79,7 +79,7 @@
 - [x] Docker Compose for full stack (Spring Boot, PostgreSQL + pgvector, Ollama, React)
 - [x] Environment configuration (profiles, secrets)
 - [x] Health check endpoints
-- [ ] README updates with setup and run instructions
+- [x] README updates with setup and run instructions
 
 ## Phase 10: Polish & Testing
 
