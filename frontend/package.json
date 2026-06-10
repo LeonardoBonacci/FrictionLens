@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "e2e": "npx playwright test",
+    "e2e:demo": "npx playwright test e2e/demo.spec.ts",
+    "e2e:record-demo": "npx playwright test e2e/demo.spec.ts && find e2e/test-results -name video.webm -exec ffmpeg -y -i {} -c:v libx264 -preset slow -crf 22 -pix_fmt yuv420p -movflags +faststart ../docs/demo.mp4 \\;"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.0",
@@ -16,6 +19,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.60.0",
     "@types/node": "^24.12.3",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

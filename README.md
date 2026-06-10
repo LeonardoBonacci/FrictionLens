@@ -4,6 +4,16 @@ A lightweight, privacy-preserving system that helps organizations understand whe
 
 ---
 
+## Demo
+
+<video src="docs/demo.mp4" width="100%" controls autoplay muted loop>
+  Your browser does not support the video tag. <a href="docs/demo.mp4">Download the demo video</a>.
+</video>
+
+> Submit friction reports, browse and filter them, then ask AI to summarize the biggest pain points — all in one flow. Recorded automatically via Playwright.
+
+---
+
 ## Overview
 
 FrictionLens is a voluntary "stuck signal" platform where employees can quickly report when their work is blocked. Each report captures the *type of role experiencing friction* (not identity), the context, and a short description of the blocker.
@@ -117,6 +127,17 @@ npm run dev
 ```
 
 The frontend starts on `http://localhost:5173` and proxies API requests to the backend.
+
+### 5. Re-record the Demo Video (optional)
+
+With the backend and frontend running:
+
+```bash
+cd frontend
+npm run e2e:record-demo
+```
+
+This runs the Playwright e2e test, records a video, and converts it to `docs/demo.mp4`.
 
 ---
 
