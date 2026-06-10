@@ -6,7 +6,7 @@ A lightweight, privacy-preserving system that helps organizations understand whe
 
 ## Demo
 
-https://github.com/LeonardoBonacci/FrictionLens/raw/main/docs/demo.mp4
+![FrictionLens Demo](docs/demo.gif)
 
 > Submit friction reports, browse and filter them, then ask AI to summarize the biggest pain points — all in one flow. Recorded automatically via Playwright.
 
