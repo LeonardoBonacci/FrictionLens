@@ -18,13 +18,13 @@
 
 ## Phase 3: Backend – Ingestion API
 
-- [ ] `POST /api/reports` – submit a friction report
-  - [ ] Request validation (job_title, team, category, severity, blocker_text)
-  - [ ] Sanitization pipeline: send blocker_text to Ollama to strip personal identifiers (names, emails)
-  - [ ] Generate embedding for sanitized text via Ollama
-  - [ ] Persist sanitized report with embedding to PostgreSQL
-- [ ] `GET /api/reports` – list reports (paginated, filterable by role/team/category/date range)
-- [ ] Unit and integration tests for ingestion flow
+- [x] `POST /api/reports` – submit a friction report
+  - [x] Request validation (job_title, team, category, severity, blocker_text)
+  - [x] Sanitization pipeline: send blocker_text to Ollama to strip personal identifiers (names, emails)
+  - [x] Generate embedding for sanitized text via Ollama
+  - [x] Persist sanitized report with embedding to PostgreSQL
+- [x] `GET /api/reports` – list reports (paginated, filterable by role/team/category/date range)
+- [x] Unit and integration tests for ingestion flow
 
 ## Phase 4: Backend – Query & Analysis API
 
