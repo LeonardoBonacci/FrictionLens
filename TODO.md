@@ -80,6 +80,10 @@
 - [x] Environment configuration (profiles, secrets)
 - [x] Health check endpoints
 - [x] README updates with setup and run instructions
+- [x] Kubernetes deployment (CloudNativePG operator, Ollama with PVC, init-container readiness, pull-model Job)
+- [x] Dockerfiles for backend (multi-stage Maven/JRE 25) and frontend (Vite/nginx)
+- [x] nginx reverse proxy with 300s timeout for long-running LLM queries
+- [x] Ollama API compatibility layer (v0.24: `/api/embeddings` + `prompt` field, `String`-body parsing for `application/octet-stream` chat responses)
 
 ## Phase 10: Polish & Testing
 

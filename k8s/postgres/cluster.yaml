@@ -1,0 +1,51 @@
+# CloudNativePG Cluster — single-instance PostgreSQL 17 with pgvector
+#
+# Prerequisites:
+#   1. CNPG operator installed (run k8s/install-operator.sh)
+#   2. Custom postgres image built and pushed:
+#        docker build -t <registry>/frictionlens-postgres:17 -f docker/Dockerfile.postgres .
+#        docker push <registry>/frictionlens-postgres:17
+#   3. Update `imageName` below to match your registry path.
+#
+# The operator creates two Services automatically:
+#   frictionlens-postgres-rw   → primary (read-write)
+#   frictionlens-postgres-ro   → replicas (read-only, not used at instances=1)
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: frictionlens-postgres
+  namespace: frictionlens
+spec:
+  imageName: leonardobonacci/frictionlens-postgres:17
+
+  instances: 1
+
+  bootstrap:
+    initdb:
+      database: frictionlens
+      owner: frictionlens
+      # Reference to the credentials-secret.yaml Secret
+      secret:
+        name: frictionlens-db-credentials
+      # Enable the pgvector extension in the application database right after creation
+      postInitApplicationSQL:
+        - CREATE EXTENSION IF NOT EXISTS vector
+
+  storage:
+    size: 5Gi
+    # Uncomment and set a storageClass if your cluster needs one:
+    # storageClass: standard
+
+  postgresql:
+    parameters:
+      # pgvector does not need shared_preload_libraries
+      max_connections: "100"
+
+  # Minimal resource requests — tune for production
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"

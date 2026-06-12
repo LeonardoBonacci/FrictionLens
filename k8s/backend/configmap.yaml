@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frictionlens-backend-config
+  namespace: frictionlens
+data:
+  # CNPG creates a -rw Service pointing to the primary
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://frictionlens-postgres-rw:5432/frictionlens"
+  SPRING_DATASOURCE_DRIVER_CLASS_NAME: "org.postgresql.Driver"
+  SPRING_JPA_HIBERNATE_DDL_AUTO: "update"
+  SPRING_JPA_OPEN_IN_VIEW: "false"
+  SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: "org.hibernate.dialect.PostgreSQLDialect"
+  OLLAMA_BASE_URL: "http://frictionlens-ollama:11434"
+  OLLAMA_MODEL: "llama3.1:latest"
+  OLLAMA_CONNECT_TIMEOUT_MS: "3000"
+  # Long enough for LLM inference; report submission degrades gracefully if Ollama is slow
+  OLLAMA_READ_TIMEOUT_MS: "120000"
+  OLLAMA_MAX_RETRIES: "0"
+  OLLAMA_RETRY_DELAY_MS: "1000"
+  SERVER_PORT: "8080"

@@ -151,11 +151,44 @@ This runs the Playwright e2e test, records a video, and converts it to `docs/dem
 
 ---
 
+## Kubernetes Deployment
+
+A full production-grade Kubernetes setup is available in [`k8s/`](k8s/README.md), using [CloudNativePG](https://cloudnative-pg.io/) as the PostgreSQL operator.
+
+Quick start (Docker Desktop or any K8s cluster):
+
+```bash
+# 1. Install CloudNativePG operator
+bash k8s/install-operator.sh
+
+# 2. Deploy everything
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/postgres/credentials-secret.yaml
+kubectl apply -f k8s/postgres/cluster.yaml
+kubectl apply -f k8s/backend/configmap.yaml
+kubectl apply -f k8s/backend/deployment.yaml
+kubectl apply -f k8s/backend/service.yaml
+kubectl apply -f k8s/ollama/pvc.yaml
+kubectl apply -f k8s/ollama/deployment.yaml
+kubectl apply -f k8s/ollama/service.yaml
+kubectl apply -f k8s/ollama/pull-model-job.yaml
+kubectl apply -f k8s/frontend/deployment.yaml
+kubectl apply -f k8s/frontend/service.yaml
+
+# 3. Port-forward
+kubectl port-forward -n frictionlens svc/frictionlens-frontend 8080:80
+```
+
+See [k8s/README.md](k8s/README.md) for full instructions, GPU support, secrets management, and scaling notes.
+
+---
+
 ## Project Structure
 
 ```
 FrictionLens/
 ├── backend/                  # Spring Boot API
+│   ├── Dockerfile            # Multi-stage build (Maven → JRE 25)
 │   └── src/main/java/com/frictionlens/
 │       ├── config/           # CORS, Ollama, vector index, seed data
 │       ├── controller/       # REST endpoints
@@ -164,10 +197,20 @@ FrictionLens/
 │       ├── repository/       # Data access (native SQL + pgvector)
 │       └── service/          # Business logic (sanitization, search, LLM)
 ├── frontend/                 # React + Vite app
+│   ├── Dockerfile            # Vite build + nginx
+│   ├── nginx.conf            # Reverse-proxies /api to backend, 300s timeout
 │   └── src/
 │       ├── api/              # API client and TypeScript types
 │       └── components/       # ReportForm, ReportsList, QueryView
-└── docker/                   # PostgreSQL init scripts
+├── k8s/                      # Kubernetes manifests
+│   ├── install-operator.sh   # Installs CloudNativePG v1.25
+│   ├── namespace.yaml
+│   ├── ingress.yaml
+│   ├── postgres/             # CloudNativePG Cluster + credentials
+│   ├── backend/              # Deployment, Service, ConfigMap
+│   ├── frontend/             # Deployment, Service
+│   └── ollama/               # Deployment, Service, PVC, pull-model Job
+└── docker/                   # PostgreSQL init scripts + CNPG Dockerfile
 ```
 
 ---

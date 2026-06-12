@@ -1,0 +1,31 @@
+# One-shot Job that waits for the Ollama server to be ready, then pulls llama3.1.
+# Apply after the Ollama deployment is running:
+#   kubectl apply -f k8s/ollama/pull-model-job.yaml
+# Monitor: kubectl logs -n frictionlens -l job-name=ollama-pull-model -f
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ollama-pull-model
+  namespace: frictionlens
+spec:
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: pull
+          image: curlimages/curl:8.8.0
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for Ollama to be ready..."
+              until curl -sf http://frictionlens-ollama:11434/api/tags > /dev/null; do
+                sleep 5
+              done
+              echo "Ollama is ready. Pulling llama3.1:latest (~4.7 GB)..."
+              curl -sf -X POST http://frictionlens-ollama:11434/api/pull \
+                -H "Content-Type: application/json" \
+                -d '{"name":"llama3.1:latest"}' \
+                --no-buffer
+              echo "Done."

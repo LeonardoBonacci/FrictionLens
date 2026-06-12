@@ -1,0 +1,32 @@
+# Ingress — exposes the frontend (which proxies /api to the backend internally).
+# Requires an Ingress controller (e.g. ingress-nginx) in your cluster.
+#
+# Quick install for ingress-nginx:
+#   kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.11.3/deploy/static/provider/cloud/deploy.yaml
+#
+# For local clusters (kind/minikube):
+#   minikube addons enable ingress
+#   -- or --
+#   kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.11.3/deploy/static/provider/baremetal/deploy.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: frictionlens
+  namespace: frictionlens
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
+spec:
+  ingressClassName: nginx
+  rules:
+    # Replace with your actual hostname, or remove `host:` to match all hostnames.
+    - host: frictionlens.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frictionlens-frontend
+                port:
+                  name: http

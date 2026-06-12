@@ -35,3 +35,6 @@ frontend/dist/
 *.iml
 .vscode/
 __pycache__/
+
+# macOS
+.DS_Store

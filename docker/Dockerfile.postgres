@@ -1,0 +1,18 @@
+# CloudNativePG base image + pgvector
+#
+# Build:
+#   docker build -t leonardobonacci/frictionlens-postgres:17 -f docker/Dockerfile.postgres .
+# Push:
+#   docker push leonardobonacci/frictionlens-postgres:17
+
+FROM ghcr.io/cloudnative-pg/postgresql:17
+
+USER root
+
+# Install pgvector from the official PostgreSQL apt repo (already configured in the base image)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends postgresql-17-pgvector && \
+    rm -rf /var/lib/apt/lists/*
+
+# CNPG runs as UID 26
+USER 26

@@ -132,25 +132,29 @@ public class OllamaService {
                     "options", Map.of("temperature", 0.0)
             );
 
-            Map<?, ?> response = restClient.post()
+            String raw = restClient.post()
                     .uri("/api/chat")
+                    .header("Accept", "*/*")
                     .body(request)
                     .retrieve()
-                    .body(Map.class);
+                    .body(String.class);
 
-            if (response != null && response.get("message") instanceof Map<?, ?> message) {
-                String content = (String) message.get("content");
-                if (content != null && !content.isBlank()) {
-                    String stripped = content.strip();
-                    // Strip any <BEGIN>/<END> tags the LLM may have echoed
-                    stripped = stripped.replaceAll("(?i)</?(?:BEGIN|END)>", "").strip();
-                    // Guard: if LLM output diverges significantly from regex result, discard it
-                    if (stripped.length() > regexResult.length() * 2
-                            || stripped.length() < regexResult.length() / 3) {
-                        log.warn("LLM sanitization output diverged from input, using regex result");
-                        return regexResult;
+            if (raw != null && !raw.isBlank()) {
+                Map<?, ?> response = objectMapper.readValue(raw, Map.class);
+                if (response.get("message") instanceof Map<?, ?> message) {
+                    String content = (String) message.get("content");
+                    if (content != null && !content.isBlank()) {
+                        String stripped = content.strip();
+                        // Strip any <BEGIN>/<END> tags the LLM may have echoed
+                        stripped = stripped.replaceAll("(?i)</?(?:BEGIN|END)>", "").strip();
+                        // Guard: if LLM output diverges significantly from regex result, discard it
+                        if (stripped.length() > regexResult.length() * 2
+                                || stripped.length() < regexResult.length() / 3) {
+                            log.warn("LLM sanitization output diverged from input, using regex result");
+                            return regexResult;
+                        }
+                        return stripped;
                     }
-                    return stripped;
                 }
             }
             return null;
@@ -161,24 +165,28 @@ public class OllamaService {
 
     public float[] generateEmbedding(String text) {
         return executeWithRetry("embedding", () -> {
+            // Use /api/embeddings (v0.24 compatible) with "prompt" field
             Map<String, Object> request = Map.of(
                     "model", ollamaConfig.getModel(),
-                    "input", text
+                    "prompt", text
             );
 
-            Map<?, ?> response = restClient.post()
-                    .uri("/api/embed")
+            String raw = restClient.post()
+                    .uri("/api/embeddings")
+                    .header("Accept", "*/*")
                     .body(request)
                     .retrieve()
-                    .body(Map.class);
+                    .body(String.class);
 
-            if (response != null && response.get("embeddings") instanceof List<?> embeddings
-                    && !embeddings.isEmpty() && embeddings.getFirst() instanceof List<?> vector) {
-                float[] result = new float[vector.size()];
-                for (int i = 0; i < vector.size(); i++) {
-                    result[i] = ((Number) vector.get(i)).floatValue();
+            if (raw != null && !raw.isBlank()) {
+                Map<?, ?> response = objectMapper.readValue(raw, Map.class);
+                if (response.get("embedding") instanceof List<?> vector) {
+                    float[] result = new float[vector.size()];
+                    for (int i = 0; i < vector.size(); i++) {
+                        result[i] = ((Number) vector.get(i)).floatValue();
+                    }
+                    return result;
                 }
-                return result;
             }
             return null;
         }, null, "Ollama embedding returned empty response");
@@ -195,13 +203,16 @@ public class OllamaService {
                     "stream", false
             );
 
-            Map<?, ?> response = restClient.post()
+            String raw = restClient.post()
                     .uri("/api/chat")
+                    .header("Accept", "*/*")
                     .body(request)
                     .retrieve()
-                    .body(Map.class);
+                    .body(String.class);
 
-            if (response != null && response.get("message") instanceof Map<?, ?> message) {
+            if (raw != null && !raw.isBlank()) {
+                Map<?, ?> response = objectMapper.readValue(raw, Map.class);
+                if (response.get("message") instanceof Map<?, ?> message) {
                 String content = (String) message.get("content");
                 if (content != null && !content.isBlank()) {
                     String json = content.strip();
@@ -210,7 +221,7 @@ public class OllamaService {
                     }
                     return objectMapper.readValue(json, new TypeReference<Map<String, String>>() {});
                 }
-            }
+            }}
             return null;
         }, Collections.emptyMap(), "Ollama query interpretation returned empty response");
     }
@@ -234,16 +245,20 @@ public class OllamaService {
                     "stream", false
             );
 
-            Map<?, ?> response = restClient.post()
+            String raw = restClient.post()
                     .uri("/api/chat")
+                    .header("Accept", "*/*")
                     .body(request)
                     .retrieve()
-                    .body(Map.class);
+                    .body(String.class);
 
-            if (response != null && response.get("message") instanceof Map<?, ?> message) {
-                String content = (String) message.get("content");
-                if (content != null && !content.isBlank()) {
-                    return content.strip();
+            if (raw != null && !raw.isBlank()) {
+                Map<?, ?> response = objectMapper.readValue(raw, Map.class);
+                if (response.get("message") instanceof Map<?, ?> message) {
+                    String content = (String) message.get("content");
+                    if (content != null && !content.isBlank()) {
+                        return content.strip();
+                    }
                 }
             }
             return null;

@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frictionlens-ollama
+  namespace: frictionlens
+  labels:
+    app: frictionlens-ollama
+spec:
+  replicas: 1
+  # Required: Ollama needs exclusive access to the model store PVC
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: frictionlens-ollama
+  template:
+    metadata:
+      labels:
+        app: frictionlens-ollama
+    spec:
+      containers:
+        - name: ollama
+          image: ollama/ollama:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 11434
+          env:
+            - name: OLLAMA_HOST
+              value: "0.0.0.0:11434"
+            - name: OLLAMA_KEEP_ALIVE
+              value: "24h"
+          volumeMounts:
+            - name: ollama-models
+              mountPath: /root/.ollama
+          livenessProbe:
+            httpGet:
+              path: /api/tags
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 10
+          readinessProbe:
+            httpGet:
+              path: /api/tags
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "4Gi"
+              cpu: "1000m"
+            limits:
+              memory: "8Gi"
+              cpu: "4000m"
+              # Uncomment if your nodes have NVIDIA GPUs and the device plugin is installed:
+              # nvidia.com/gpu: "1"
+      volumes:
+        - name: ollama-models
+          persistentVolumeClaim:
+            claimName: frictionlens-ollama-models

@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: frictionlens-ollama-models
+  namespace: frictionlens
+  labels:
+    app: frictionlens-ollama
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      # llama3.1 is ~4.7 GB; allocate extra headroom for other models
+      storage: 15Gi
+  # Uncomment if your cluster requires a specific StorageClass:
+  # storageClassName: standard
